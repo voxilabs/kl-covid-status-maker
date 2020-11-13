@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kerala Covid-19 Status Maker</title>
+    <link href="https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"
+        integrity="sha512-qTXRIMyZIFb8iQcfjXWCO8+M5Tbc38Qi5WzdPOYZHIlZpzBHG3L3by84BBBOiRGiEb7KKtAOAs5qYdUiZiQNNQ=="
+        crossorigin="anonymous"></script>
+    <!-- The core Firebase JS SDK is always required and must be listed first -->
+    <script src="/__/firebase/8.0.2/firebase-app.js"></script>
+    <!-- Used Firebase services -->
+    <script src="/__/firebase/8.0.1/firebase-auth.js"></script>
+    <script src="/__/firebase/8.0.1/firebase-firestore.js"></script>
+    <!-- Initialize Firebase -->
+    <script src="/__/firebase/init.js"></script>
+
+    <!-- Firebase pre-built login ui -->
+    <script src="https://www.gstatic.com/firebasejs/ui/4.6.1/firebase-ui-auth.js"></script>
+    <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/4.6.1/firebase-ui-auth.css" />
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
+    <script type="text/javascript" src="./domvas.js"></script>
+    <script type="text/javascript" src="./data-extractor.js"></script>
+    <script type="text/javascript">
+        function showPage(pageId) {
+            for (element of document.getElementsByClassName("page")) {
+                element.classList.add("hidden")
+            }
+            document.getElementById(pageId).classList.remove("hidden")
+        }
+
+        async function handleSubmit() {
+            showPage("loader")
+            let gokText = document.getElementById("goktext").value
+            let values = getValues(gokText)
+
+            showPage("result")
+
+            document.getElementById("todayDate").innerText = values.date.format('Do MMMM YYYY | dddd')
+
+            document.getElementById("positiveCases").innerText = values.positive
+            document.getElementById("negativeCases").innerText = values.negative
+            document.getElementById("unknown").innerText = values.unknown
+            document.getElementById("deaths").innerText = values.deaths
+            document.getElementById("numberOfTests").innerText = values.samples
+
+            for (d of Object.keys(values.positiveDistricts)) {
+                document.getElementById(`d${d}positive`).innerText = `+${values.positiveDistricts[d]}`
+            }
+            for (d of Object.keys(values.negativeDistricts)) {
+                document.getElementById(`d${d}negative`).innerText = `-${values.negativeDistricts[d]}`
+            }
+
+            const db = firebase.firestore()
+            let jsonValues = { ...values }
+            jsonValues.date = jsonValues.date.format('YYYYMMDD')
+
+            await db.collection("covid-data").doc(jsonValues.date).set(jsonValues, {merge: true})
+
+            const covidDataQuerySnapshot = await db.collection("covid-data").orderBy("date", "desc").limit(31).get()
+            let positivityData = []
+            let unknownData = []
+            let labels = []
+            covidDataQuerySnapshot.forEach(doc => {
+                let data = doc.data()
+                labels.push(moment(data.date, 'YYYYMMDD').format('DD MMM'))
+                positivityData.push(data.positive * 100.0 / data.samples)
+                unknownData.push(data.unknown * 100.0 / data.positive)
+            })
+
+            labels = labels.reverse()
+            positivityData = positivityData.reverse()
+            unknownData = unknownData.reverse()
+
+            const positivitySlope = (positivityData[0] - positivityData[positivityData.length - 1]) / positivityData.length
+            let positivityDataTrend = []
+            for (let index = 0; index < positivityData.length; index++) {
+                positivityDataTrend.push(positivityData[0] - positivitySlope * index)
+            }
+
+            const unknownSlope = (unknownData[0] - unknownData[unknownData.length - 1]) / unknownData.length
+            let unknownDataTrend = []
+            for (let index = 0; index < unknownData.length; index++) {
+                unknownDataTrend.push(unknownData[0] - unknownSlope * index)
+            }
+
+            let chartPositivityCtx = document.getElementById('chartPositivity').getContext('2d')
+            let chartUnknownCtx = document.getElementById('chartUnknownSource').getContext('2d')
+
+            new Chart(chartPositivityCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Positivity',
+                        data: positivityData,
+                        backgroundColor: 'red',
+                        borderColor: 'red',
+                        fill: false,
+                        ticks: {
+                            autoSkiips: false
+                        }
+                    },
+                    {
+                        label: 'Trend',
+                        data: positivityDataTrend,
+                        backgroundColor: 'green',
+                        borderColor: 'lightgreen',
+                        fill: false,
+                    }
+                    ]
+                }
+            });
+            new Chart(chartUnknownCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Positivity',
+                        data: unknownData,
+                        backgroundColor: 'red',
+                        borderColor: 'red',
+                        fill: false,
+                        ticks: {
+                            autoSkiips: false
+                        }
+                    },
+                    {
+                        label: 'Trend',
+                        data: unknownDataTrend,
+                        backgroundColor: 'green',
+                        borderColor: 'lightgreen',
+                        fill: false,
+                    }
+                    ]
+                }
+            });
+
+        }
+
+        function docReady(fn) {
+            // see if DOM is already available
+            if (document.readyState === "complete" || document.readyState === "interactive") {
+                // call on next available tick
+                setTimeout(fn, 1);
+            } else {
+                document.addEventListener("DOMContentLoaded", fn);
+            }
+        }
+
+
+        async function login() {
+            firebase.auth().onAuthStateChanged((currentUser) => {
+                if (!currentUser) {
+                    showPage('login')
+                    var ui = new firebaseui.auth.AuthUI(firebase.auth());
+                    ui.start('#firebaseui-auth-container', {
+                        signInOptions: [
+                            firebase.auth.GoogleAuthProvider.PROVIDER_ID
+                        ],
+                        callbacks: {
+                            signInSuccessWithAuthResult: function (authResult, redirectUrl) {
+                                firebase.auth().signInWithCredential(authResult.credential)
+                                    .then(() => {
+
+                                        showPage('home')
+                                        return false;
+                                    }).catch(error => {
+                                        alert(error.code)
+                                    })
+                            }
+                        }
+                    });
+                } else {
+                    showPage('home')
+                }
+            })
+        }
+
+        function toImage() {
+            domtoimage.toJpeg(document.getElementById("htmlcanvas"), { quality: 1 })
+                .then((dataUrl) => {
+                    var link = document.createElement('a');
+                    link.download = 'covid-update.jpeg';
+                    link.href = dataUrl;
+                    link.click();
+                })
+        }
+
+        async function populateTextArea() {
+            const text = await navigator.clipboard.readText()
+            if (text.match(/GoK Direct App/)) {
+                document.getElementById("goktext").value = text
+            }
+        }
+
+        docReady(login)
+        docReady(populateTextArea)
+    </script>
+
+</head>
+
+<body>
+    <div id="loader" class="page bg-purple-700 w-screen h-screen flex justify-center items-center">
+        <img src="https://samherbert.net/svg-loaders/svg-loaders/puff.svg" alt="Loading">
+    </div>
+    <div id="login" class="page hidden">
+        <div class="flex bg-purple-700 text-white p-4">
+            <h2 class="text-lg text-center">Kerala Covid-19 Status Maker</h2>
+        </div>
+        <div id="firebaseui-auth-container"></div>
+    </div>
+    <div id="home" class="page hidden">
+        <div class="flex bg-purple-700 text-white p-4">
+            <h2 class="text-lg">Kerala Covid-19 Status Maker</h2>
+        </div>
+        <div id="form" class="p-4 w-full">
+            <label for="goktext" class="w-full">Text from GoK App</label>
+            <textarea id="goktext" name="goktext" class="mt-1 w-full border border-grey-500 rounded" rows="10"></textarea>
+            <button class="bg-purple-700 text-white w-full py-1 rounded shadow-md" onclick="handleSubmit()">
+                Make Status
+            </button>
+        </div>
+    </div>
+
+    <div id="result" class="page hidden">
+        <div id="htmlcanvas" class="bg-white text-sm">
+            <div class="w-screen p-2 bg-purple-700 text-white">
+                <p class="text-2xl font-bold">Covid 19 Updates</p>
+                <p id="todayDate" class="text-lg"></p>
+            </div>
+            <div class="w-screen p-2 flex items-center">
+                <div class="mr-1 w-4/12">
+                    <div>
+                        <p id="positiveCases" class="text-xl leading-tight font-bold"></p>
+                        <p class="">Positive Cases</p>
+                    </div>
+                    <div class="my-2"></div>
+                    <div>
+                        <p id="negativeCases" class="text-xl leading-tight font-bold"></p>
+                        <p class="">Negative Cases</p>
+                    </div>
+                </div>
+                <div class="m-1 w-4/12">
+                    <p id="unknown" class="text-xl leading-tight font-bold text-center"></p>
+                    <p class="text-center">Unknown Sources</p>
+                </div>
+                <div class="ml-1 w-4/12">
+                    <div>
+                        <p id="deaths" class="text-xl leading-tight font-bold text-right"></p>
+                        <p class=" text-right">Deaths</p>
+                    </div>
+                    <div class="my-2"></div>
+                    <div>
+                        <p id="numberOfTests" class="text-xl leading-tight font-bold text-right"></p>
+                        <p class=" text-right">Number of Tests</p>
+                    </div>
+                </div>
+            </div>
+            <div class="w-screen flex text-sm">
+                <div class="w-6/12 p-2">
+                    <div class="w-full flex">
+                        <div class="w-6/12 truncate">Kasargod</div>
+                        <div class="w-3/12 text-right"><span id="d14positive" class="text-red-700 "></span></div>
+                        <div class="w-3/12 text-right"><span id="d14negative" class="text-green-700 "></span></div>
+                    </div>
+
+                    <div class="w-full flex">
+                        <div class="w-6/12 truncate">Kannur</div>
+                        <div class="w-3/12 text-right"><span id="d13positive" class="text-red-700 "></span></div>
+                        <div class="w-3/12 text-right"><span id="d13negative" class="text-green-700 "></span></div>
+                    </div>
+
+                    <div class="w-full flex">
+                        <div class="w-6/12 truncate">Wayanad</div>
+                        <div class="w-3/12 text-right"><span id="d12positive" class="text-red-700 "></span></div>
+                        <div class="w-3/12 text-right"><span id="d12negative" class="text-green-700 "></span></div>
+                    </div>
+
+
+
+                    <div class="w-full flex">
+                        <div class="w-6/12 truncate">Kozhikkode</div>
+                        <div class="w-3/12 text-right"><span id="d11positive" class="text-red-700 "></span></div>
+                        <div class="w-3/12 text-right"><span id="d11negative" class="text-green-700 "></span></div>
+                    </div>
+
+                    <div class="w-full flex">
+                        <div class="w-6/12 truncate">Malappuram</div>
+                        <div class="w-3/12 text-right"><span id="d10positive" class="text-red-700 "></span></div>
+                        <div class="w-3/12 text-right"><span id="d10negative" class="text-green-700 "></span></div>
+                    </div>
+
+                    <div class="w-full flex">
+                        <div class="w-6/12 truncate">Palakkad</div>
+                        <div class="w-3/12 text-right"><span id="d9positive" class="text-red-700 "></span></div>
+                        <div class="w-3/12 text-right"><span id="d9negative" class="text-green-700 "></span></div>
+                    </div>
+
+                    <div class="w-full flex">
+                        <div class="w-6/12 truncate">Thrissur</div>
+                        <div class="w-3/12 text-right"><span id="d8positive" class="text-red-700 "></span></div>
+                        <div class="w-3/12 text-right"><span id="d8negative" class="text-green-700 "></span></div>
+                    </div>
+                </div>
+                <div class="w-6/12 p-2">
+
+
+                    <div class="w-full flex">
+                        <div class="w-6/12 truncate">Ernakulam</div>
+                        <div class="w-3/12 text-right"><span id="d7positive" class="text-red-700 "></span></div>
+                        <div class="w-3/12 text-right"><span id="d7negative" class="text-green-700 "></span></div>
+                    </div>
+
+                    <div class="w-full flex">
+                        <div class="w-6/12 truncate">Idukki</div>
+                        <div class="w-3/12 text-right"><span id="d6positive" class="text-red-700 "></span></div>
+                        <div class="w-3/12 text-right"><span id="d6negative" class="text-green-700 "></span></div>
+                    </div>
+
+                    <div class="w-full flex">
+                        <div class="w-6/12 truncate">Kottayam</div>
+                        <div class="w-3/12 text-right"><span id="d5positive" class="text-red-700 "></span></div>
+                        <div class="w-3/12 text-right"><span id="d5negative" class="text-green-700 "></span></div>
+                    </div>
+
+                    <div class="w-full flex">
+                        <div class="w-6/12 truncate">Alappuzha</div>
+                        <div class="w-3/12 text-right"><span id="d4positive" class="text-red-700 "></span></div>
+                        <div class="w-3/12 text-right"><span id="d4negative" class="text-green-700 "></span></div>
+                    </div>
+
+
+
+                    <div class="w-full flex">
+                        <div class="w-6/12 truncate">Pathanamthitta</div>
+                        <div class="w-3/12 text-right"><span id="d3positive" class="text-red-700 "></span></div>
+                        <div class="w-3/12 text-right"><span id="d3negative" class="text-green-700 "></span></div>
+                    </div>
+
+                    <div class="w-full flex">
+                        <div class="w-6/12 truncate">Kollam</div>
+                        <div class="w-3/12 text-right"><span id="d2positive" class="text-red-700 "></span></div>
+                        <div class="w-3/12 text-right"><span id="d2negative" class="text-green-700 "></span></div>
+                    </div>
+
+                    <div class="w-full flex">
+                        <div class="w-6/12 truncate">Thiruvananthapuram</div>
+                        <div class="w-3/12 text-right"><span id="d1positive" class="text-red-700 "></span></div>
+                        <div class="w-3/12 text-right"><span id="d1negative" class="text-green-700 "></span></div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="w-screen p-2">
+                <canvas id="chartPositivity" height="200"></canvas>
+
+            </div>
+            <div class="w-screen p-2">
+                <canvas id="chartUnknownSource" height="200"></canvas>
+
+            </div>
+            <div class="w-screen text-xs text-gray-600 p-4">
+                Disclaimer: This image has been generated based on data from the official GoK app and news channels by
+                an individual. This may have errors. Report any errors to anroopak@gmail.com
+            </div>
+        </div>
+        <div class="w-screen p-2">
+            <button class="bg-purple-700 text-white w-full py-1 rounded shadow-md" onclick="toImage()">
+                Download
+            </button>
+        </div>
+    </div>
+
+
+    </div>
+</body>
+
+</html>
