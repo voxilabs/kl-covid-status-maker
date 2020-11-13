@@ -74,13 +74,15 @@
             positivityData = positivityData.reverse()
             unknownData = unknownData.reverse()
 
-            const positivitySlope = (positivityData[0] - positivityData[positivityData.length - 1]) / positivityData.length
+            const positivityProjections = squareProject(positivityData)
+            const positivitySlope =( positivityProjections[0] - positivityProjections[1] )/ positivityData.length
             let positivityDataTrend = []
             for (let index = 0; index < positivityData.length; index++) {
                 positivityDataTrend.push(positivityData[0] - positivitySlope * index)
             }
 
-            const unknownSlope = (unknownData[0] - unknownData[unknownData.length - 1]) / unknownData.length
+            const unknownProjections = squareProject(unknownData)
+            const unknownSlope = (unknownProjections[0] - unknownProjections[1]) / unknownData.length
             let unknownDataTrend = []
             for (let index = 0; index < unknownData.length; index++) {
                 unknownDataTrend.push(unknownData[0] - unknownSlope * index)
@@ -100,7 +102,7 @@
                         borderColor: 'red',
                         fill: false,
                         ticks: {
-                            autoSkiips: false
+                            autoSkips: false
                         }
                     },
                     {
@@ -124,7 +126,7 @@
                         borderColor: 'red',
                         fill: false,
                         ticks: {
-                            autoSkiips: false
+                            autoSkips: false
                         }
                     },
                     {
