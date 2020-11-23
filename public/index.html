@@ -20,7 +20,7 @@
     <!-- Firebase pre-built login ui -->
     <script src="https://www.gstatic.com/firebasejs/ui/4.6.1/firebase-ui-auth.js"></script>
     <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/4.6.1/firebase-ui-auth.css" />
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script type="text/javascript" src="./domvas.js"></script>
     <script type="text/javascript" src="./data-extractor.js"></script>
     <script type="text/javascript">
@@ -57,7 +57,7 @@
             let jsonValues = { ...values }
             jsonValues.date = jsonValues.date.format('YYYYMMDD')
 
-            await db.collection("covid-data").doc(jsonValues.date).set(jsonValues, {merge: true})
+            await db.collection("covid-data").doc(jsonValues.date).set(jsonValues, { merge: true })
 
             const covidDataQuerySnapshot = await db.collection("covid-data").orderBy("date", "desc").limit(31).get()
             let positivityData = []
@@ -65,7 +65,7 @@
             let labels = []
             covidDataQuerySnapshot.forEach(doc => {
                 let data = doc.data()
-                labels.push(moment(data.date, 'YYYYMMDD').format('DD MMM'))
+                labels.push(moment(data.date, 'YYYYMMDD').toDate())
                 positivityData.push(data.positive * 100.0 / data.samples)
                 unknownData.push(data.unknown * 100.0 / data.positive)
             })
@@ -74,71 +74,49 @@
             positivityData = positivityData.reverse()
             unknownData = unknownData.reverse()
 
-            const positivityProjections = squareProject(positivityData)
-            const positivitySlope =( positivityProjections[0] - positivityProjections[1] )/ positivityData.length
-            let positivityDataTrend = []
-            for (let index = 0; index < positivityData.length; index++) {
-                positivityDataTrend.push(positivityData[0] - positivitySlope * index)
-            }
+            google.charts.load('current', { packages: ['corechart', 'line'] })
+            google.charts.setOnLoadCallback(() => {
+                let positivityChartData = new google.visualization.DataTable()
+                positivityChartData.addColumn('date', 'Date')
+                positivityChartData.addColumn('number', 'Positivity')
+                positivityChartData.addRows(positivityData.map((e, i) => [labels[i], e]))
 
-            const unknownProjections = squareProject(unknownData)
-            const unknownSlope = (unknownProjections[0] - unknownProjections[1]) / unknownData.length
-            let unknownDataTrend = []
-            for (let index = 0; index < unknownData.length; index++) {
-                unknownDataTrend.push(unknownData[0] - unknownSlope * index)
-            }
+                let unknownChartData = new google.visualization.DataTable()
+                unknownChartData.addColumn('date', 'Date')
+                unknownChartData.addColumn('number', 'Unknown')
+                unknownChartData.addRows(unknownData.map((e, i) => [labels[i], e]))
 
-            let chartPositivityCtx = document.getElementById('chartPositivity').getContext('2d')
-            let chartUnknownCtx = document.getElementById('chartUnknownSource').getContext('2d')
-
-            new Chart(chartPositivityCtx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Positivity',
-                        data: positivityData,
-                        backgroundColor: 'red',
-                        borderColor: 'red',
-                        fill: false,
-                        ticks: {
-                            autoSkips: false
-                        }
+                let positivityChartOptions = {
+                    hAxis: {
+                        logScale: false
                     },
-                    {
-                        label: 'Trend',
-                        data: positivityDataTrend,
-                        backgroundColor: 'green',
-                        borderColor: 'lightgreen',
-                        fill: false,
-                    }
-                    ]
-                }
-            });
-            new Chart(chartUnknownCtx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Positivity',
-                        data: unknownData,
-                        backgroundColor: 'red',
-                        borderColor: 'red',
-                        fill: false,
-                        ticks: {
-                            autoSkips: false
-                        }
+                    vAxis: {
+                        logScale: false
                     },
-                    {
-                        label: 'Trend',
-                        data: unknownDataTrend,
-                        backgroundColor: 'green',
-                        borderColor: 'lightgreen',
-                        fill: false,
-                    }
-                    ]
+                    trendlines: { 0: { type: 'linear' } },
+                    title: 'Test Positivity Rate',
+                    legend: 'none'
                 }
-            });
+                let unknownChartOptions = {
+                    hAxis: {
+                        logScale: false
+                    },
+                    vAxis: {
+                        logScale: false
+                    },
+                    trendlines: { 0: { type: 'linear' } },
+                    title: 'Unknown Cases Rate',
+                    legend: 'none'
+                }
+
+                let chart = new google.visualization.LineChart(document.getElementById('chartPositivity'))
+                chart.draw(positivityChartData, positivityChartOptions)
+
+                let unknownChart = new google.visualization.LineChart(document.getElementById('chartUnknownSource'))
+                unknownChart.draw(unknownChartData, unknownChartOptions)
+            })
+
+
 
         }
 
@@ -220,7 +198,8 @@
         </div>
         <div id="form" class="p-4 w-full">
             <label for="goktext" class="w-full">Text from GoK App</label>
-            <textarea id="goktext" name="goktext" class="mt-1 w-full border border-grey-500 rounded" rows="10"></textarea>
+            <textarea id="goktext" name="goktext" class="mt-1 w-full border border-grey-500 rounded"
+                rows="10"></textarea>
             <button class="bg-purple-700 text-white w-full py-1 rounded shadow-md" onclick="handleSubmit()">
                 Make Status
             </button>
@@ -357,11 +336,11 @@
                 </div>
             </div>
             <div class="w-screen p-2">
-                <canvas id="chartPositivity" height="200"></canvas>
+                <div id="chartPositivity" height="300" class="w-full"></div>
 
             </div>
             <div class="w-screen p-2">
-                <canvas id="chartUnknownSource" height="200"></canvas>
+                <div id="chartUnknownSource" height="300" class="w-full"></div>
 
             </div>
             <div class="w-screen text-xs text-gray-600 p-4">
