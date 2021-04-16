@@ -31,6 +31,10 @@
             document.getElementById(pageId).classList.remove("hidden")
         }
 
+        function roundAccurately(number, decimalPlaces) {
+            return Number(Math.round(number + "e" + decimalPlaces) + "e-" + decimalPlaces)
+        }
+
         async function handleSubmit() {
             showPage("loader")
             let gokText = document.getElementById("goktext").value
@@ -40,11 +44,11 @@
 
             document.getElementById("todayDate").innerText = values.date.format('Do MMMM YYYY | dddd')
 
-            document.getElementById("positiveCases").innerText = values.positive
-            document.getElementById("negativeCases").innerText = values.negative
-            document.getElementById("unknown").innerText = values.unknown
-            document.getElementById("deaths").innerText = values.deaths
-            document.getElementById("numberOfTests").innerText = values.samples
+            document.getElementById("positiveCases").innerText = `${values.positive.toLocaleString()} (${roundAccurately(values.positive/values.samples*100, 2)}%)`
+            document.getElementById("negativeCases").innerText = values.negative.toLocaleString()
+            document.getElementById("unknown").innerText = `${values.unknown.toLocaleString()} (${roundAccurately(values.unknown/values.positive*100, 2)}%)`
+            document.getElementById("deaths").innerText = values.deaths.toLocaleString()
+            document.getElementById("numberOfTests").innerText = values.samples.toLocaleString()
 
             for (d of Object.keys(values.positiveDistricts)) {
                 document.getElementById(`d${d}positive`).innerText = `+${values.positiveDistricts[d]}`
@@ -59,7 +63,7 @@
 
             await db.collection("covid-data").doc(jsonValues.date).set(jsonValues, { merge: true })
 
-            const covidDataQuerySnapshot = await db.collection("covid-data").orderBy("date", "desc").limit(31).get()
+            const covidDataQuerySnapshot = await db.collection("covid-data").orderBy("date", "desc").limit(7).get()
             let positivityData = []
             let unknownData = []
             let labels = []
@@ -213,31 +217,28 @@
                 <p id="todayDate" class="text-lg"></p>
             </div>
             <div class="w-screen p-2 flex items-center">
-                <div class="mr-1 w-4/12">
-                    <div>
-                        <p id="positiveCases" class="text-xl leading-tight font-bold"></p>
-                        <p class="">Positive Cases</p>
-                    </div>
-                    <div class="my-2"></div>
-                    <div>
-                        <p id="negativeCases" class="text-xl leading-tight font-bold"></p>
-                        <p class="">Negative Cases</p>
-                    </div>
+                <div class="w-6/12">
+                    <p id="positiveCases" class="text-2xl leading-tight font-bold text-center"></p>
+                    <p class="text-center">Positive Cases</p>
                 </div>
-                <div class="m-1 w-4/12">
-                    <p id="unknown" class="text-xl leading-tight font-bold text-center"></p>
+                <div class="w-6/12">
+                    <p id="unknown" class="text-2xl leading-tight font-bold text-center"></p>
                     <p class="text-center">Unknown Sources</p>
                 </div>
-                <div class="ml-1 w-4/12">
-                    <div>
-                        <p id="deaths" class="text-xl leading-tight font-bold text-right"></p>
-                        <p class=" text-right">Deaths</p>
-                    </div>
-                    <div class="my-2"></div>
-                    <div>
-                        <p id="numberOfTests" class="text-xl leading-tight font-bold text-right"></p>
-                        <p class=" text-right">Number of Tests</p>
-                    </div>
+            </div>
+            <div class="w-screen p-2 flex items-center">
+                <div class="w-4/12">
+                    <p id="negativeCases" class="text-xl leading-tight font-bold text-center"></p>
+                    <p class="text-center">Negative Cases</p>
+                </div>
+                <div class="w-4/12">
+                    <p id="deaths" class="text-xl leading-tight font-bold text-center"></p>
+                    <p class="text-center">Deaths</p>
+                </div>
+
+                <div class="w-4/12">
+                    <p id="numberOfTests" class="text-xl leading-tight font-bold text-center"></p>
+                    <p class="text-center">Number of Tests</p>
                 </div>
             </div>
             <div class="w-screen flex text-sm">
@@ -335,12 +336,12 @@
 
                 </div>
             </div>
-            <div class="w-screen p-2">
-                <div id="chartPositivity" height="300" class="w-full"></div>
+            <div class="w-screen p-2 flex">
+                <div id="chartPositivity" height="300" class="w-6/12"></div>
 
-            </div>
-            <div class="w-screen p-2">
-                <div id="chartUnknownSource" height="300" class="w-full"></div>
+                <!-- </div>
+            <div class="w-screen p-2"> -->
+                <div id="chartUnknownSource" height="300" class="w-6/12"></div>
 
             </div>
             <div class="w-screen text-xs text-gray-600 p-4">

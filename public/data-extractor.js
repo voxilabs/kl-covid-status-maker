@@ -8,9 +8,9 @@ function getValues(text) {
 
     const regexes = {
         positive: /ഇന്ന്\s+([0-9,])+\s+പേര്‍.*\s+കോവിഡ്-19/,
-        deaths: /([0-9,])+\s+മരണങ്ങളാണ്\s+ഇന്ന്\s+കോവിഡ്/,
+        deaths: /കഴിഞ്ഞ.*ദിവസങ്ങളിലുണ്ടായ.*([0-9,])+.*മരണങ്ങളാണ്/,
         negative: /രോഗം\s+സ്ഥിരീകരിച്ച്\s+ചികിത്സയിലായിരുന്ന\s+([0-9,]+)\s+പേരുടെ\s+പരിശോധനാഫലം\s+നെഗറ്റീവ്\s+ആയി/,
-        samples: /[0-9,]+\s+സാമ്പിളുകളാണ്\s+പരിശോധിച്ചത്/,
+        samples: /മണിക്കൂറിനിടെ.*[0-9,]+.*സാമ്പിളു/,
         unknown: /[0-9,]+\s+പേരുടെ\s+സമ്പര്‍ക്ക\s+ഉറവിടം\s+വ്യക്തമല്ല./
     }
 
@@ -38,7 +38,7 @@ function getValues(text) {
         2: 'കൊല്ലം',
         1: 'തിരുവനന്തപുരം',
     }
-    const positiveParagraphRegex = /ഇന്ന്\s+[0-9]+\s+പേര്‍.*\s+കോവിഡ്-19.*എന്നിങ്ങനേയാണ്\s+ജില്ലകളില്‍\s+ഇന്ന്\s+രോഗ\s+ബാധ\s+സ്ഥിരീകരിച്ചത്/
+    const positiveParagraphRegex = /ഇന്ന്\s+[0-9,]+\s+പേര്‍ക്ക്.*\s+കോവിഡ്-19.*എന്നിങ്ങനേയാണ്\s+ജില്ലകളില്‍\s+ഇന്ന്\s+രോഗ\s+ബാധ\s+സ്ഥിരീകരിച്ചത്/
     let positiveParagraph = text.match(positiveParagraphRegex)[0]
     values['positiveDistricts'] = {}
     for (let d in districts) {
@@ -52,7 +52,7 @@ function getValues(text) {
 
 
 
-    const negativeParaRegex = /രോഗം\s+സ്ഥിരീകരിച്ച്\s+ചികിത്സയിലായിരുന്ന\s+[0-9]+\s+പേരുടെ\s+പരിശോധനാഫലം\s+നെഗറ്റീവ്\s+ആയി.\s+.*\s+എന്നിങ്ങനേയാണ്\s+പരിശോധനാ\s+ഫലം\s+ഇന്ന്\s+നെഗറ്റീവായത്. /
+    const negativeParaRegex = /രോഗം\s+സ്ഥിരീകരിച്ച്\s+ചികിത്സയിലായിരുന്ന\s+[0-9,]+\s+പേരുടെ\s+പരിശോധനാഫലം\s+നെഗറ്റീവ്\s+ആയി.\s+.*\s+എന്നിങ്ങനേയാണ്\s+പരിശോധനാ\s+ഫലം\s+ഇന്ന്\s+നെഗറ്റീവായത്./
     let negativeParagraph = text.match(negativeParaRegex)[0]
     values['negativeDistricts'] = {}
     for (let d in districts) {
@@ -66,3 +66,4 @@ function getValues(text) {
 
     return values
 }
+
