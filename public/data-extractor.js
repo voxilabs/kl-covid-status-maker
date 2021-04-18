@@ -16,9 +16,8 @@ function getValues(text) {
 
     Object.keys(regexes).forEach(element => {
         let result = text.match(regexes[element])
-        if (!result) console.log(`DEBUG [regexes[element], result]: ${[element, result]}`)
-        let number = result[0].match(/[0-9,]+/)[0]
-        values[element] = parseInt(number.replace(",", ""))
+        let number = result[0].match(/[0-9]+(,[0-9]+)*/)[0]
+        values[element] = Number(number.replace(",", "").replace(",", ""))
     });
 
 
@@ -45,7 +44,7 @@ function getValues(text) {
         let dRegex = `${districts[d]} [0-9,]+`
         let result = positiveParagraph.match(RegExp(dRegex))
         if (result) {
-            result = result[0].match(/[0-9]+/)[0]
+            result = result[0].match(/[0-9,]+/)[0]
             values['positiveDistricts'][d] = parseInt(result)
         }
     }

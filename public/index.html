@@ -63,7 +63,7 @@
 
             await db.collection("covid-data").doc(jsonValues.date).set(jsonValues, { merge: true })
 
-            const covidDataQuerySnapshot = await db.collection("covid-data").orderBy("date", "desc").limit(7).get()
+            const covidDataQuerySnapshot = await db.collection("covid-data").orderBy("date", "desc").limit(9).get()
             let positivityData = []
             let unknownData = []
             let labels = []
@@ -218,26 +218,26 @@
             </div>
             <div class="w-screen p-2 flex items-center">
                 <div class="w-6/12">
-                    <p id="positiveCases" class="text-2xl leading-tight font-bold text-center"></p>
+                    <p id="positiveCases" class="text-xl leading-tight font-bold text-center"></p>
                     <p class="text-center">Positive Cases</p>
                 </div>
                 <div class="w-6/12">
-                    <p id="unknown" class="text-2xl leading-tight font-bold text-center"></p>
+                    <p id="unknown" class="text-xl leading-tight font-bold text-center"></p>
                     <p class="text-center">Unknown Sources</p>
                 </div>
             </div>
             <div class="w-screen p-2 flex items-center">
                 <div class="w-4/12">
-                    <p id="negativeCases" class="text-xl leading-tight font-bold text-center"></p>
+                    <p id="negativeCases" class="text-lg leading-tight font-bold text-center"></p>
                     <p class="text-center">Negative Cases</p>
                 </div>
                 <div class="w-4/12">
-                    <p id="deaths" class="text-xl leading-tight font-bold text-center"></p>
+                    <p id="deaths" class="text-lg leading-tight font-bold text-center"></p>
                     <p class="text-center">Deaths</p>
                 </div>
 
                 <div class="w-4/12">
-                    <p id="numberOfTests" class="text-xl leading-tight font-bold text-center"></p>
+                    <p id="numberOfTests" class="text-lg leading-tight font-bold text-center"></p>
                     <p class="text-center">Number of Tests</p>
                 </div>
             </div>
