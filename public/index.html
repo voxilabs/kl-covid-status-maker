@@ -22,6 +22,7 @@
     <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/4.6.1/firebase-ui-auth.css" />
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script type="text/javascript" src="./domvas.js"></script>
+    <script type="text/javascript" src="./gauss.min.js"></script>
     <script type="text/javascript" src="./data-extractor.js"></script>
     <script type="text/javascript">
         function showPage(pageId) {
@@ -63,7 +64,7 @@
 
             await db.collection("covid-data").doc(jsonValues.date).set(jsonValues, { merge: true })
 
-            const covidDataQuerySnapshot = await db.collection("covid-data").orderBy("date", "desc").limit(9).get()
+            const covidDataQuerySnapshot = await db.collection("covid-data").orderBy("date", "desc").limit(25).get()
             let positivityData = []
             let unknownData = []
             let labels = []
@@ -77,6 +78,12 @@
             labels = labels.reverse()
             positivityData = positivityData.reverse()
             unknownData = unknownData.reverse()
+
+            positivityData = positivityData.toVector()
+            positivityData = positivityData.ema(7)
+
+            unknownData = unknownData.toVector()
+            unknownData = unknownData.ema(7)
 
             google.charts.load('current', { packages: ['corechart', 'line'] })
             google.charts.setOnLoadCallback(() => {
@@ -98,7 +105,7 @@
                         logScale: false
                     },
                     trendlines: { 0: { type: 'linear' } },
-                    title: 'Test Positivity Rate',
+                    title: 'Test Positivity Rate(moving average)',
                     legend: 'none'
                 }
                 let unknownChartOptions = {
@@ -109,7 +116,7 @@
                         logScale: false
                     },
                     trendlines: { 0: { type: 'linear' } },
-                    title: 'Unknown Cases Rate',
+                    title: 'Unknown Cases Rate(moving average)',
                     legend: 'none'
                 }
 
