@@ -9,9 +9,9 @@ function getValues(text) {
     const regexes = {
         positive: /ഇന്ന്\s+([0-9,])+\s+പേര്‍.*\s+കോവിഡ്-19/,
         deaths: /കഴിഞ്ഞ.*ദിവസങ്ങളിലുണ്ടായ.*([0-9,])+.*മരണങ്ങളാണ്/,
-        negative: /രോഗം\s+സ്ഥിരീകരിച്ച്\s+ചികിത്സയിലായിരുന്ന\s+([0-9,]+)\s+പേരുടെ\s+പരിശോധനാഫലം\s+നെഗറ്റീവ്\s+ആയി/,
+        negative: /രോഗം\s+സ്ഥിരീകരിച്ച്\s+ചികിത്സയിലായിരുന്ന\s+([0-9,]+)\s+/,
         samples: /മണിക്കൂറിനിടെ.*[0-9,]+.*സാമ്പിളു/,
-        unknown: /[0-9,]+\s+പേരുടെ\s+സമ്പര്‍ക്ക\s+ഉറവിടം\s+വ്യക്തമല്ല./
+        unknown: /[0-9,]+\s+പേരുടെ\s+സമ്പര്‍ക്ക\s+ഉറവിടം\s+വ്യക്തമല്ല/
     }
 
     Object.keys(regexes).forEach(element => {
@@ -51,7 +51,7 @@ function getValues(text) {
 
 
 
-    const negativeParaRegex = /രോഗം\s+സ്ഥിരീകരിച്ച്\s+ചികിത്സയിലായിരുന്ന\s+[0-9,]+\s+പേരുടെ\s+പരിശോധനാഫലം\s+നെഗറ്റീവ്\s+ആയി.\s+.*\s+എന്നിങ്ങനേയാണ്\s+പരിശോധനാ\s+ഫലം\s+ഇന്ന്\s+നെഗറ്റീവായത്./
+    const negativeParaRegex = /രോഗം\s+സ്ഥിരീകരിച്ച്\s+ചികിത്സയിലായിരുന്ന\s+[0-9,]+.*എന്നിങ്ങനേയാണ്/
     let negativeParagraph = text.match(negativeParaRegex)[0]
     values['negativeDistricts'] = {}
     for (let d in districts) {
